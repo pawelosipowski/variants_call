@@ -49,6 +49,12 @@ mkdir ./"$2"
 # lcr read filtering with lcr_filter.py
 python ./soft/lcr_filter.py ./"$2"/"$2"_lcr.bed ./"$2"/"$2"_q30.vcf ./"$2"/"$2"_lcrfree.vcf ./"$2"/"$2"_inlcr_var.txt
 
+#count depth score for filtering (Li H, 2014)
+avg_depth=$(./soft/samtools-1.3/samtools depth ./0/0_sorted.bam  |  awk '{sum+=$3} END { print sum/NR}'| bc -l)
+depth_score=$(echo "$avg_depth + sqrt($avg_depth) * 3" | bc -l)
+echo $depth_score
+
+
 #variant max min read depth filtering(DP); if either the number of non-reference reads on the forward strand or on the reverse strand is
 #below treshold=3(SAF & SAR)
 ./soft/vcflib/bin/vcffilter -f "DP < 50" ./"$2"/"$2"_lcrfree.vcf > ./"$2"/"$2"_DP.vcf
