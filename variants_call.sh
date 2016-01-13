@@ -49,18 +49,28 @@ mkdir ./"$2"
 # lcr read filtering with lcr_filter.py
 python ./soft/lcr_filter.py ./"$2"/"$2"_lcr.bed ./"$2"/"$2"_q30.vcf ./"$2"/"$2"_lcrfree.vcf ./"$2"/"$2"_inlcr_var.txt
 
-#count depth score for filtering (Li H, 2014)
+#variant read depth filtering(MD); if either the number of non-reference reads on the forward strand or on the reverse strand is
+#below treshold=3(SAF & SAR)
+
+#count depth score for max MD filtering (Li H, 2014)
+#samtools (this is valid - takes only covered bases to count average)
 avg_depth=$(./soft/samtools-1.3/samtools depth ./0/0_sorted.bam  |  awk '{sum+=$3} END { print sum/NR}'| bc -l)
 depth_score=$(echo "$avg_depth + sqrt($avg_depth) * 3" | bc -l)
-echo $depth_score
+echo 'average loci base coverage is: ' $avg_depth ', and depth score is: ' $depth_score
+#bedtools (this is not valid - 0 coverage bases are also taken to count average depth)
+#keeping it for future
+#./soft/bedtools2/bin/bedtools genomecov -it -ibam ./"$2"/"$2"_sorted.bam > ./"$2"/"$2"_coverage_hist.txt
+#avg_depth=$(awk '{ total += $4; count++ } END { print total/count }' ./"$2"/"$2"_coverage.txt)
+#depth_score=$(echo "$avg_depth + sqrt($avg_depth) * 3" | bc -l)
+#echo 'average loci base coverage is: ' $avg_depth ', and depth score is: ' $depth_score
 
-
-#variant max min read depth filtering(DP); if either the number of non-reference reads on the forward strand or on the reverse strand is
-#below treshold=3(SAF & SAR)
-./soft/vcflib/bin/vcffilter -f "DP < 50" ./"$2"/"$2"_lcrfree.vcf > ./"$2"/"$2"_DP.vcf
-./soft/vcflib/bin/vcffilter -f "DP > 5" ./"$2"/"$2"_DP.vcf > ./"$2"/"$2"_DP2.vcf
-./soft/vcflib/bin/vcffilter -f "SAF > 3" ./"$2"/"$2"_DP2.vcf > ./"$2"/"$2"_SAF.vcf
-./soft/vcflib/bin/vcffilter -f "SAR > 3" ./"$2"/"$2"_SAF.vcf > ./"$2"/"$2"_filt.vcf
+#max MD
+./soft/vcflib/bin/vcffilter -f "DP < $depth_score" ./"$2"/"$2"_lcrfree.vcf > ./"$2"/"$2"_DP.vcf
+#min MD
+./soft/vcflib/bin/vcffilter -f "DP > 10" ./"$2"/"$2"_DP.vcf > ./"$2"/"$2"_DP2.vcf
+#SAF&SAR
+./soft/vcflib/bin/vcffilter -f "SAF > 5" ./"$2"/"$2"_DP2.vcf > ./"$2"/"$2"_SAF.vcf
+./soft/vcflib/bin/vcffilter -f "SAR > 5" ./"$2"/"$2"_SAF.vcf > ./"$2"/"$2"_filt.vcf
 
 # bcftools
 bgzip ./"$2"/"$2"_filt.vcf
